@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TAKEOFF PERF</title>
+<style>
+  :root {
+    --bg: #000;
+    --bg2: #111;
+    --card: #1c1c1e;
+    --card2: #2c2c2e;
+    --border: #3a3a3c;
+    --text: #fff;
+    --text2: #aeaeb2;
+    --text3: #636366;
+    --blue: #0a84ff;
+    --green: #30d158;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --yellow: #ffd60a;
+    --radius: 12px;
+    --radius-lg: 18px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif; font-size:16px; -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
+
+  .app { display:flex; flex-direction:column; height:100dvh; max-width:430px; margin:0 auto; position:relative; overflow:hidden; background:var(--bg); }
+
+  /* Status bar */
+  .status-bar { height:calc(44px + var(--safe-top)); padding-top:var(--safe-top); background:rgba(0,0,0,.85); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); display:flex; align-items:flex-end; justify-content:space-between; padding-left:16px; padding-right:16px; padding-bottom:8px; position:absolute; top:0; left:0; right:0; z-index:100; border-bottom:1px solid rgba(255,255,255,.06); }
+  .status-time { font-size:15px; font-weight:600; letter-spacing:-.3px; }
+  .status-icons { display:flex; align-items:center; gap:6px; }
+  .status-icons svg { fill:white; }
+
+  /* Nav bar */
+  .nav-bar { background:rgba(0,0,0,.85); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,.08); padding:8px 16px 12px; position:absolute; top:calc(44px + var(--safe-top)); left:0; right:0; z-index:99; display:flex; align-items:center; justify-content:space-between; min-height:44px; }
+  .nav-title { font-size:17px; font-weight:600; letter-spacing:-.4px; }
+  .nav-btn { font-size:17px; font-weight:400; color:var(--blue); background:none; border:none; cursor:pointer; padding:4px 0; min-width:44px; display:flex; align-items:center; }
+  .nav-btn.right { justify-content:flex-end; }
+  .nav-btn:active { opacity:.5; }
+
+  /* Tab bar */
+  .tab-bar { position:absolute; bottom:0; left:0; right:0; z-index:100; background:rgba(18,18,18,.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid rgba(255,255,255,.1); display:flex; padding-bottom:calc(var(--safe-bottom) + 4px); padding-top:8px; }
+  .tab-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; padding:0 4px; }
+  .tab-item:active .tab-icon { transform:scale(.9); }
+  .tab-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; transition:transform .1s; }
+  .tab-icon svg { transition:fill .2s; }
+  .tab-label { font-size:10px; font-weight:500; letter-spacing:.1px; color:var(--text3); transition:color .2s; }
+  .tab-item.active .tab-label { color:var(--blue); }
+  .tab-item.active .tab-icon svg { fill:var(--blue) !important; }
+
+  /* Content */
+  .content { position:absolute; top:calc(44px + var(--safe-top) + 44px); left:0; right:0; bottom:calc(49px + var(--safe-bottom)); overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding:16px 16px 32px; display:none; }
+  .content.active { display:block; }
+
+  /* Section headers */
+  .section-header { font-size:13px; font-weight:400; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; margin:20px 4px 6px; }
+  .section-header:first-child { margin-top:4px; }
+
+  /* Cards / grouped lists */
+  .card { background:var(--card); border-radius:var(--radius-lg); overflow:hidden; }
+  .row { display:flex; align-items:center; padding:11px 16px; min-height:44px; border-bottom:1px solid rgba(255,255,255,.06); gap:12px; }
+  .row:last-child { border-bottom:none; }
+  .row-label { font-size:16px; color:var(--text); flex:0 0 auto; min-width:100px; }
+  .row-label.wide { min-width:130px; }
+  .row-input { flex:1; background:none; border:none; outline:none; font-size:16px; color:var(--blue); text-align:right; font-family:inherit; caret-color:var(--blue); min-width:0; padding:0; }
+  .row-input::placeholder { color:var(--text3); }
+  .row-input:focus { color:var(--text); }
+  .row-value { flex:1; font-size:16px; color:var(--text2); text-align:right; }
+  .row-chevron { color:var(--text3); font-size:14px; margin-left:4px; flex-shrink:0; }
+  .row-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
+
+  /* Buttons */
+  .action-btn { width:100%; padding:16px; border-radius:var(--radius-lg); border:none; font-size:17px; font-weight:600; cursor:pointer; letter-spacing:-.3px; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; }
+  .action-btn.primary { background:var(--blue); color:#fff; }
+  .action-btn.primary:active { background:#0066cc; transform:scale(.98); }
+  .action-btn.secondary { background:var(--card2); color:var(--text); }
+  .action-btn.secondary:active { background:var(--card); transform:scale(.98); }
+  .action-btn.green { background:var(--green); color:#000; }
+  .action-btn.green:active { background:#24a846; transform:scale(.98); }
+  .action-btn:disabled { opacity:.4; cursor:not-allowed; transform:none !important; }
+
+  /* Loading bar */
+  .loading-bar { height:3px; background:var(--blue); border-radius:2px; width:0%; transition:width .4s ease; }
+
+  /* Spinner */
+  .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.2); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Pills */
+  .pill-row { display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px; }
+  .pill { padding:6px 16px; border-radius:20px; font-size:14px; font-weight:500; border:1px solid var(--border); background:var(--card2); color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .pill.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .pill:active { transform:scale(.95); }
+
+  /* Weight bars */
+  .weight-bar-wrap { padding:12px 16px 14px; }
+  .weight-bar-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text3); margin-bottom:6px; }
+  .weight-bar-track { height:5px; background:var(--card2); border-radius:3px; overflow:hidden; }
+  .weight-bar-fill { height:100%; border-radius:3px; transition:width .5s ease, background .3s; }
+
+  /* Banners */
+  .info-banner { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:rgba(10,132,255,.12); border-radius:var(--radius); border:1px solid rgba(10,132,255,.25); font-size:14px; color:var(--blue); margin-bottom:12px; line-height:1.4; }
+  .success-banner { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:rgba(48,209,88,.12); border-radius:var(--radius); border:1px solid rgba(48,209,88,.25); font-size:14px; color:var(--green); margin-bottom:12px; line-height:1.4; }
+  .warning-banner { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:rgba(255,159,10,.12); border-radius:var(--radius); border:1px solid rgba(255,159,10,.25); font-size:14px; color:var(--orange); margin-bottom:12px; line-height:1.4; }
+  .error-banner { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:rgba(255,69,58,.12); border-radius:var(--radius); border:1px solid rgba(255,69,58,.25); font-size:14px; color:var(--red); margin-bottom:12px; line-height:1.4; }
+
+  /* Output */
+  .output-tabs { display:flex; background:var(--card2); border-radius:8px; padding:2px; margin-bottom:10px; }
+  .output-tab { flex:1; padding:7px; text-align:center; font-size:13px; font-weight:500; border-radius:6px; cursor:pointer; color:var(--text3); transition:all .2s; }
+  .output-tab.active { background:var(--card); color:var(--text); }
+  .output-panel { background:#0a0a0a; border-radius:var(--radius); padding:14px; font-family:'SF Mono','Menlo','Courier New',monospace; font-size:12.5px; line-height:1.65; color:#e0e0e0; white-space:pre-wrap; word-break:break-all; border:1px solid rgba(255,255,255,.08); max-height:340px; overflow-y:auto; }
+
+  /* Toggle */
+  .toggle { width:51px; height:31px; background:var(--card2); border-radius:16px; position:relative; cursor:pointer; transition:background .25s; flex-shrink:0; }
+  .toggle.on { background:var(--green); }
+  .toggle::after { content:''; position:absolute; top:2px; left:2px; width:27px; height:27px; background:white; border-radius:50%; transition:transform .25s cubic-bezier(.4,0,.2,1); box-shadow:0 1px 4px rgba(0,0,0,.35); }
+  .toggle.on::after { transform:translateX(20px); }
+
+  /* Runway card */
+  .runway-card { background:var(--card); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:12px; border:1px solid var(--border); }
+  .runway-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(10,132,255,.08); border-bottom:1px solid rgba(255,255,255,.06); }
+  .runway-id { font-size:22px; font-weight:700; letter-spacing:-.5px; }
+  .runway-grid { display:grid; grid-template-columns:1fr 1fr 1fr; }
+  .runway-cell { padding:10px 14px; border-right:1px solid rgba(255,255,255,.06); border-top:1px solid rgba(255,255,255,.06); }
+  .runway-cell:last-child { border-right:none; }
+  .runway-cell-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .runway-cell-val { font-size:18px; font-weight:600; letter-spacing:-.3px; }
+
+  /* Folder path */
+  .folder-path { font-size:13px; color:var(--text3); font-family:'SF Mono',monospace; word-break:break-all; flex:1; text-align:right; }
+
+  /* Empty state */
+  .empty-state { text-align:center; padding:48px 24px; }
+  .empty-icon { font-size:48px; margin-bottom:14px; }
+  .empty-title { font-size:20px; font-weight:600; margin-bottom:8px; }
+  .empty-sub { font-size:15px; color:var(--text2); line-height:1.5; }
+
+  /* Divider */
+  .divider { height:1px; background:rgba(255,255,255,.06); }
+
+  /* Log */
+  .log-panel { background:#0a0a0a; border-radius:var(--radius); padding:12px 14px; font-family:'SF Mono','Menlo',monospace; font-size:11px; line-height:1.7; color:#888; white-space:pre-wrap; word-break:break-all; border:1px solid rgba(255,255,255,.06); max-height:180px; overflow-y:auto; margin-top:8px; }
+  .log-ok { color:var(--green); }
+  .log-warn { color:var(--orange); }
+  .log-err { color:var(--red); }
+
+  /* Badge */
+  .badge { font-size:12px; font-weight:600; padding:3px 9px; border-radius:10px; flex-shrink:0; }
+  .badge-green { background:rgba(48,209,88,.2); color:var(--green); }
+  .badge-blue { background:rgba(10,132,255,.2); color:var(--blue); }
+  .badge-orange { background:rgba(255,159,10,.2); color:var(--orange); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-time" id="clockDisplay">9:41</div>
+    <div class="status-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" opacity=".3"/><rect x="4" y="2" width="3" height="10" rx="1" opacity=".5"/><rect x="8" y="0" width="3" height="12" rx="1" opacity=".75"/><rect x="12" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C5.6 2.4 3.5 3.4 2 5L0 3C2 1.1 4.9 0 8 0s6 1.1 8 3l-2 2c-1.5-1.6-3.6-2.6-6-2.6z" opacity=".3"/><path d="M8 5.4C6.4 5.4 5 6.1 4 7.2L2 5.2C3.5 3.8 5.7 3 8 3s4.5.8 6 2.2L12 7.2c-1-1.1-2.4-1.8-4-1.8z" opacity=".6"/><path d="M8 8.4c-.9 0-1.7.4-2.3.9L8 12l2.3-2.7c-.6-.5-1.4-.9-2.3-.9z"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-width="1" fill="none" opacity=".35"/><rect x="22" y="3.5" width="3" height="5" rx="1" fill="white" opacity=".4"/><rect x="1.5" y="2.5" width="17" height="7" rx="1.5" fill="white"/></svg>
+    </div>
+  </div>
+
+  <!-- Nav Bar -->
+  <div class="nav-bar">
+    <div style="width:44px"></div>
+    <div class="nav-title" id="navTitle">TAKEOFF PERF</div>
+    <button class="nav-btn right" onclick="switchTab('settings')">⚙</button>
+  </div>
+
+  <!-- ════════ TAB: FLIGHT ════════ -->
+  <div class="content active" id="tab-flight">
+
+    <div class="section-header">SIMBRIEF</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-icon" style="background:rgba(10,132,255,.15)">✈</div>
+        <div class="row-label">Username</div>
+        <input class="row-input" id="simbriefUser" type="text" placeholder="your username" autocomplete="off" autocorrect="off" spellcheck="false" oninput="save()">
+      </div>
+      <div class="row" style="padding:12px 16px;flex-direction:column;align-items:stretch;gap:8px;">
+        <button class="action-btn primary" id="fetchBtn" onclick="fetchSimbrief()">
+          <span id="fetchSpinner" style="display:none"><div class="spinner"></div></span>
+          <span id="fetchBtnText">Fetch Latest OFP</span>
+        </button>
+        <div class="loading-bar" id="loadingBar"></div>
+      </div>
+    </div>
+
+    <div id="simbriefStatus"></div>
+
+    <!-- Flight details (hidden until loaded) -->
+    <div id="flightSection" style="display:none">
+
+      <div class="section-header">FLIGHT</div>
+      <div class="card">
+        <div class="row"><div class="row-label">Flight</div><div class="row-value" id="d-fltnum">—</div></div>
+        <div class="row"><div class="row-label">Route</div><div class="row-value" id="d-route">—</div></div>
+        <div class="row"><div class="row-label">Aircraft</div><div class="row-value" id="d-actype">—</div></div>
+        <div class="row"><div class="row-label">Reg / Fin</div><div class="row-value" id="d-reg">—</div></div>
+        <div class="row"><div class="row-label">OFP</div><div class="row-value" id="d-ofp">—</div></div>
+        <div class="row"><div class="row-label">Conditions</div><div class="row-value" id="d-conds">—</div></div>
+      </div>
+
+      <div class="section-header">WEIGHTS & LOADING</div>
+      <div class="card">
+        <div class="row">
+          <div class="row-label">Passengers</div>
+          <input class="row-input" id="paxCount" type="number" inputmode="numeric" placeholder="0" oninput="recalcWeights()">
+        </div>
+        <div class="row">
+          <div class="row-label">Cargo (lbs)</div>
+          <input class="row-input" id="cargo" type="number" inputmode="numeric" placeholder="0" oninput="recalcWeights()">
+        </div>
+        <div class="row">
+          <div class="row-label">CG % MAC</div>
+          <input class="row-input" id="cgPercent" type="number" inputmode="decimal" step="0.1" placeholder="25.0">
+        </div>
+        <div class="row">
+          <div class="row-label">ZFW Override</div>
+          <input class="row-input" id="zfwOverride" type="number" inputmode="numeric" placeholder="optional (lbs)" oninput="recalcWeights()">
+        </div>
+        <div class="row">
+          <div class="row-label">Ramp Fuel (lbs)</div>
+          <input class="row-input" id="planRamp" type="number" inputmode="numeric" placeholder="0" oninput="recalcWeights()">
+        </div>
+      </div>
+
+      <!-- Live weight display -->
+      <div class="card" style="margin-top:8px">
+        <div class="weight-bar-wrap">
+          <div class="weight-bar-label"><span>ZFW</span><span id="zfwDisplay">— lbs</span></div>
+          <div class="weight-bar-track"><div class="weight-bar-fill" id="zfwBar" style="width:0%;background:var(--green)"></div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="weight-bar-wrap">
+          <div class="weight-bar-label"><span>TOW</span><span id="towDisplay">— lbs</span></div>
+          <div class="weight-bar-track"><div class="weight-bar-fill" id="towBar" style="width:0%;background:var(--blue)"></div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="weight-bar-wrap">
+          <div class="weight-bar-label"><span>LDW</span><span id="ldwDisplay">— lbs</span></div>
+          <div class="weight-bar-track"><div class="weight-bar-fill" id="ldwBar" style="width:0%;background:var(--orange)"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════ TAB: RUNWAY ════════ -->
+  <div class="content" id="tab-runway">
+    <div id="runwayEmptyState" class="empty-state">
+      <div class="empty-icon">🛫</div>
+      <div class="empty-title">No Flight Loaded</div>
+      <div class="empty-sub">Fetch a SimBrief OFP on the Flight tab first</div>
+    </div>
+    <div id="runwayContent" style="display:none">
+      <div class="section-header">SELECT RUNWAY</div>
+      <div class="card">
+        <div class="pill-row" id="runwayPills"></div>
+      </div>
+      <div id="runwayCardArea"></div>
+
+      <div class="section-header">OVERRIDE V-SPEEDS & DATA</div>
+      <div class="card">
+        <div class="row"><div class="row-label">V1</div><input class="row-input" id="rwyV1" type="number" inputmode="numeric" placeholder="SimBrief"></div>
+        <div class="row"><div class="row-label">VR</div><input class="row-input" id="rwyVR" type="number" inputmode="numeric" placeholder="SimBrief"></div>
+        <div class="row"><div class="row-label">V2</div><input class="row-input" id="rwyV2" type="number" inputmode="numeric" placeholder="SimBrief"></div>
+        <div class="row"><div class="row-label">Flex Temp</div><input class="row-input" id="rwyFlex" type="text" inputmode="numeric" placeholder="°C"></div>
+        <div class="row"><div class="row-label">Thrust</div><input class="row-input" id="rwyThr" type="text" placeholder="e.g. D-TO1"></div>
+        <div class="row"><div class="row-label">Flaps / CONF</div><input class="row-input" id="rwyFlaps" type="text" placeholder="e.g. 5"></div>
+        <div class="row">
+          <div class="row-label">Bleed ON</div>
+          <div style="flex:1;display:flex;justify-content:flex-end">
+            <div class="toggle" id="bleedToggle" data-val="ON" onclick="toggleBleed(this)"></div>
+          </div>
+        </div>
+        <div class="row"><div class="row-label">Headwind (kt)</div><input class="row-input" id="rwyHD" type="number" inputmode="decimal" placeholder="+ head / − tail"></div>
+        <div class="row"><div class="row-label">Max Wt (×1K)</div><input class="row-input" id="rwyMaxWT" type="number" inputmode="decimal" placeholder="×1000 lbs"></div>
+        <div class="row"><div class="row-label">Limit Code</div><input class="row-input" id="rwyLimit" type="text" placeholder="e.g. C"></div>
+        <div class="row"><div class="row-label">ASDR (ft)</div><input class="row-input" id="rwyASDR" type="number" inputmode="numeric" placeholder="optional"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ TAB: GENERATE ════════ -->
+  <div class="content" id="tab-generate">
+    <div id="genEmptyState" class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Ready to Generate</div>
+      <div class="empty-sub">Fetch a SimBrief OFP and select a runway, then tap Generate</div>
+    </div>
+    <div id="genContent" style="display:none">
+
+      <div id="genBannerArea"></div>
+
+      <div class="section-header">OUTPUT FOLDER</div>
+      <div class="card">
+        <div class="row" style="cursor:pointer" onclick="chooseFolder()">
+          <div class="row-icon" style="background:rgba(255,159,10,.15)">📁</div>
+          <div class="row-label">Save To</div>
+          <div class="folder-path" id="folderDisplay">Tap to set…</div>
+          <div class="row-chevron">›</div>
+        </div>
+        <div class="row">
+          <div class="row-label">Subfolder</div>
+          <input class="row-input" id="subFolder" type="text" placeholder="e.g. KEYW_0313" autocorrect="off" spellcheck="false" oninput="save()">
+        </div>
+      </div>
+
+      <div class="section-header">GENERATE TPS</div>
+      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <button class="action-btn green" id="genBtn" onclick="generateTPS()">
+          <span id="genSpinner" style="display:none"><div class="spinner" style="border-top-color:#000"></div></span>
+          <span id="genBtnText">Generate TPS</span>
+          <span id="genBtnArrow">▶</span>
+        </button>
+        <div class="loading-bar" id="genLoadingBar"></div>
+      </div>
+
+      <div id="outputArea" style="display:none">
+        <div class="section-header">OUTPUT</div>
+        <div class="output-tabs">
+          <div class="output-tab active" id="outTab-takeoff" onclick="switchOutTab('takeoff')">TAKEOFF</div>
+          <div class="output-tab" id="outTab-closeout" onclick="switchOutTab('closeout')">CLOSEOUT</div>
+          <div class="output-tab" id="outTab-log" onclick="switchOutTab('log')">LOG</div>
+        </div>
+        <div class="output-panel" id="outputPanel">—</div>
+        <div style="margin-top:10px;display:flex;gap:10px">
+          <button class="action-btn secondary" style="flex:1" onclick="copyOutput()">Copy</button>
+          <button class="action-btn secondary" style="flex:1" onclick="downloadOutput()">⬇ Save</button>
+        </div>
+        <div id="savedPathInfo"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════ TAB: SETTINGS ════════ -->
+  <div class="content" id="tab-settings">
+    <div class="section-header">SIMBRIEF</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-label">Username</div>
+        <input class="row-input" id="settingsUser" type="text" placeholder="your username" autocorrect="off" spellcheck="false" oninput="syncUser(this)">
+      </div>
+    </div>
+
+    <div class="section-header">AIRCRAFT</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-label">ICAO Type</div>
+        <input class="row-input" id="aircraftType" type="text" placeholder="B738" autocorrect="off" spellcheck="false" style="text-transform:uppercase" oninput="save()">
+      </div>
+    </div>
+
+    <div class="section-header">SERVER</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-label wide">API Base URL</div>
+        <input class="row-input" id="apiBaseUrl" type="url" placeholder="http://localhost:5000" autocorrect="off" spellcheck="false" oninput="save()">
+      </div>
+      <div class="row">
+        <div class="row-label wide">Status</div>
+        <div class="row-value" id="serverStatus">—</div>
+        <button class="nav-btn right" style="font-size:13px;min-width:auto" onclick="pingServer()">Check</button>
+      </div>
+    </div>
+
+    <div class="section-header">ABOUT</div>
+    <div class="card">
+      <div class="row"><div class="row-label">Version</div><div class="row-value">1.0</div></div>
+      <div class="row"><div class="row-label">Backend</div><div class="row-value">Flask + gunicorn</div></div>
+      <div class="row"><div class="row-label">Core Script</div><div class="row-value">TAKEOFF_PERF.py</div></div>
+    </div>
+
+    <div style="height:1px;margin:20px 0;background:var(--border)"></div>
+    <button class="action-btn secondary" onclick="clearData()" style="margin:0">Clear Saved Data</button>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item active" id="tabBtn-flight" onclick="switchTab('flight')">
+      <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#636366"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      <div class="tab-label">Flight</div>
+    </div>
+    <div class="tab-item" id="tabBtn-runway" onclick="switchTab('runway')">
+      <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#636366"><path d="M4 6h16v2H4zm2 5h12v2H6zm-2 5h16v2H4z"/></svg></div>
+      <div class="tab-label">Runway</div>
+    </div>
+    <div class="tab-item" id="tabBtn-generate" onclick="switchTab('generate')">
+      <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#636366"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+      <div class="tab-label">Generate</div>
+    </div>
+    <div class="tab-item" id="tabBtn-settings" onclick="switchTab('settings')">
+      <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#636366"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96a7.24 7.24 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
+      <div class="tab-label">Settings</div>
+    </div>
+  </div>
+
+</div>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const S = {
+  ofp: null,
+  runways: [],
+  selRwy: 0,
+  outputTakeoff: '',
+  outputCloseout: '',
+  outputLog: '',
+  outTab: 'takeoff',
+  takeoffFilename: '',
+  closeoutFilename: '',
+  savedPath: '',
+};
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+function save() {
+  try {
+    sessionStorage.setItem('tps', JSON.stringify({
+      user:    document.getElementById('simbriefUser').value,
+      actype:  document.getElementById('aircraftType').value,
+      folder:  document.getElementById('folderDisplay').textContent,
+      sub:     document.getElementById('subFolder').value,
+      apiUrl:  document.getElementById('apiBaseUrl').value,
+    }));
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem('tps') || '{}');
+    if (d.user)   { document.getElementById('simbriefUser').value = d.user; document.getElementById('settingsUser').value = d.user; }
+    if (d.actype) document.getElementById('aircraftType').value = d.actype;
+    if (d.folder && d.folder !== 'Tap to set…') document.getElementById('folderDisplay').textContent = d.folder;
+    if (d.sub)    document.getElementById('subFolder').value = d.sub;
+    if (d.apiUrl) document.getElementById('apiBaseUrl').value = d.apiUrl;
+  } catch(e) {}
+}
+
+function clearData() {
+  if (confirm('Clear all saved preferences?')) {
+    sessionStorage.removeItem('tps');
+    location.reload();
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getApiBase() {
+  const v = document.getElementById('apiBaseUrl').value.trim();
+  return v.replace(/\/$/, '') || window.location.origin;
+}
+
+function clock() {
+  const n = new Date();
+  document.getElementById('clockDisplay').textContent =
+    `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+setInterval(clock, 10000); clock();
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+const TAB_TITLES = { flight:'TAKEOFF PERF', runway:'Runway Data', generate:'Generate TPS', settings:'Settings' };
+function switchTab(name) {
+  ['flight','runway','generate','settings'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+    document.getElementById(`tabBtn-${t}`).classList.toggle('active', t === name);
+  });
+  document.getElementById('navTitle').textContent = TAB_TITLES[name];
+}
+
+// ── Server ping ───────────────────────────────────────────────────────────────
+async function pingServer() {
+  const el = document.getElementById('serverStatus');
+  el.textContent = '…';
+  try {
+    const r = await fetch(getApiBase() + '/api/simbrief?username=ping', { signal: AbortSignal.timeout(5000) });
+    el.style.color = 'var(--green)';
+    el.textContent = '● Online';
+  } catch(e) {
+    el.style.color = 'var(--red)';
+    el.textContent = '● Offline';
+  }
+}
+
+// ── SimBrief fetch ────────────────────────────────────────────────────────────
+async function fetchSimbrief() {
+  const user = document.getElementById('simbriefUser').value.trim();
+  if (!user) { showStatus('error', 'Enter your SimBrief username first'); return; }
+  document.getElementById('settingsUser').value = user;
+
+  const btn = document.getElementById('fetchBtn');
+  btn.disabled = true;
+  document.getElementById('fetchSpinner').style.display = '';
+  document.getElementById('fetchBtnText').textContent = 'Fetching…';
+
+  const bar = document.getElementById('loadingBar');
+  bar.style.width = '25%';
+
+  showStatus('info', '📡 Connecting to SimBrief via server…');
+
+  try {
+    bar.style.width = '55%';
+    const res = await fetch(`${getApiBase()}/api/simbrief?username=${encodeURIComponent(user)}`);
+    bar.style.width = '85%';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.fltnum) throw new Error('No OFP data returned — check username');
+
+    S.ofp = data;
+    S.runways = data.runways || [];
+    populateUI();
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.width = '0%'; }, 600);
+    showStatus('success', `✓ OFP loaded — ${data.fltnum}  ${data.origin_icao} → ${data.dest_icao}`);
+    save();
+  } catch(e) {
+    bar.style.width = '0%';
+    showStatus('error', `⚠ ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('fetchSpinner').style.display = 'none';
+    document.getElementById('fetchBtnText').textContent = 'Fetch Latest OFP';
+  }
+}
+
+// ── Populate UI ───────────────────────────────────────────────────────────────
+function populateUI() {
+  const d = S.ofp;
+  document.getElementById('d-fltnum').textContent = d.fltnum || '—';
+  document.getElementById('d-route').textContent = `${d.origin_icao} → ${d.dest_icao}  (${d.origin_iata}-${d.dest_iata})`;
+  document.getElementById('d-actype').textContent = `${d.acname || d.icaocode}  [${d.icaocode}]`;
+  document.getElementById('d-reg').textContent = `${d.registration}  /  FIN ${d.fin || '—'}`;
+  document.getElementById('d-ofp').textContent = d.ofp || '—';
+  document.getElementById('d-conds').textContent = `${d.temp}°C  QNH ${d.qnh}  ${(d.surface||'dry').toUpperCase()}`;
+
+  document.getElementById('paxCount').value = d.pax_count;
+  document.getElementById('cargo').value = d.cargo;
+  document.getElementById('planRamp').value = d.plan_ramp;
+  document.getElementById('cgPercent').value = '25.0';
+  document.getElementById('flightSection').style.display = '';
+
+  if (d.icaocode && !document.getElementById('aircraftType').value)
+    document.getElementById('aircraftType').value = d.icaocode;
+
+  buildRunwayUI(d.runways || []);
+  document.getElementById('runwayEmptyState').style.display = 'none';
+  document.getElementById('runwayContent').style.display = '';
+  document.getElementById('genEmptyState').style.display = 'none';
+  document.getElementById('genContent').style.display = '';
+
+  recalcWeights();
+}
+
+// ── Runway UI ─────────────────────────────────────────────────────────────────
+function buildRunwayUI(runways) {
+  const pills = document.getElementById('runwayPills');
+  pills.innerHTML = '';
+  runways.forEach((r, i) => {
+    const p = document.createElement('div');
+    p.className = 'pill' + (i === 0 ? ' active' : '');
+    p.textContent = `RWY ${r.id}`;
+    p.onclick = () => selectRunway(i);
+    pills.appendChild(p);
+  });
+  if (runways.length) selectRunway(0);
+}
+
+function selectRunway(i) {
+  S.selRwy = i;
+  document.querySelectorAll('.pill').forEach((p, idx) => p.classList.toggle('active', idx === i));
+  const r = S.runways[i];
+  if (!r) return;
+
+  const hd = parseFloat(r.HD || 0);
+  const hdColor = hd > 0 ? 'var(--green)' : hd < 0 ? 'var(--red)' : 'var(--text2)';
+  const hdText = Math.abs(hd) >= 1 ? `${hd > 0 ? '↑' : '↓'} ${Math.abs(hd).toFixed(0)} kt ${hd > 0 ? 'HW' : 'TW'}` : '—';
+
+  document.getElementById('runwayCardArea').innerHTML = `
+    <div class="runway-card">
+      <div class="runway-header">
+        <div>
+          <div style="font-size:11px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase">Active Runway</div>
+          <div class="runway-id">RWY ${r.id}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3)">LENGTH</div>
+          <div style="font-size:18px;font-weight:600">${r.length ? parseInt(r.length).toLocaleString() : '—'} ft</div>
+        </div>
+      </div>
+      <div class="runway-grid">
+        <div class="runway-cell"><div class="runway-cell-label">V1</div><div class="runway-cell-val" style="color:var(--blue)">${r.v1 || '—'}</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">VR</div><div class="runway-cell-val" style="color:var(--blue)">${r.vr || '—'}</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">V2</div><div class="runway-cell-val" style="color:var(--blue)">${r.v2 || '—'}</div></div>
+      </div>
+      <div class="runway-grid">
+        <div class="runway-cell"><div class="runway-cell-label">FLAP/CONF</div><div class="runway-cell-val" style="font-size:16px">${r.flaps || '—'}</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">FLEX</div><div class="runway-cell-val" style="font-size:16px">${r.flex && r.flex !== 'XXX' ? r.flex + '°C' : '—'}</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">THR</div><div class="runway-cell-val" style="font-size:14px">${r.thr || '—'}</div></div>
+      </div>
+      <div class="runway-grid">
+        <div class="runway-cell"><div class="runway-cell-label">MAX WT</div><div class="runway-cell-val" style="font-size:16px">${r.max_weight || '—'}K</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">WIND</div><div class="runway-cell-val" style="font-size:14px;color:${hdColor}">${hdText}</div></div>
+        <div class="runway-cell"><div class="runway-cell-label">BLEED</div><div class="runway-cell-val" style="font-size:16px">${r.bleed || '—'}</div></div>
+      </div>
+    </div>`;
+
+  // Prefill override placeholders
+  const fields = { rwyV1:r.v1, rwyVR:r.vr, rwyV2:r.v2, rwyFlex:r.flex, rwyThr:r.thr, rwyFlaps:r.flaps, rwyHD:hd||'', rwyMaxWT:r.max_weight, rwyLimit:r.limit_code };
+  Object.entries(fields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.placeholder = val || el.getAttribute('placeholder') || '';
+  });
+  const tog = document.getElementById('bleedToggle');
+  const bleedOn = (r.bleed || '').toUpperCase() === 'ON';
+  tog.classList.toggle('on', bleedOn);
+  tog.dataset.val = bleedOn ? 'ON' : 'OFF';
+}
+
+function toggleBleed(el) {
+  const on = !el.classList.contains('on');
+  el.classList.toggle('on', on);
+  el.dataset.val = on ? 'ON' : 'OFF';
+}
+
+// ── Weight calculator ─────────────────────────────────────────────────────────
+function recalcWeights() {
+  if (!S.ofp) return;
+  const d = S.ofp;
+  const pax   = parseInt(document.getElementById('paxCount').value) || 0;
+  const cargo = parseInt(document.getElementById('cargo').value) || 0;
+  const ramp  = parseInt(document.getElementById('planRamp').value) || 0;
+  const ovr   = document.getElementById('zfwOverride').value.trim();
+  const zfw   = ovr ? parseInt(ovr) : (parseInt(d.oew) + pax * d.pax_weight + cargo);
+  const tof   = ramp - parseInt(d.taxi_fuel || 0);
+  const tow   = zfw + tof;
+  const ldw   = tow - parseInt(d.enroute_burn || 0);
+  const mzfw  = parseInt(d.max_zfw) || 1;
+  const mtow  = parseInt(d.max_tow) || 1;
+  const mldw  = parseInt(d.max_ldw) || 1;
+
+  const setBar = (id, barId, val, max) => {
+    const pct = Math.min(100, Math.round(val / max * 100));
+    document.getElementById(id).textContent = `${val.toLocaleString()} lbs`;
+    document.getElementById(barId).style.width = pct + '%';
+    document.getElementById(barId).style.background = pct > 97 ? 'var(--red)' : pct > 90 ? 'var(--orange)' : barId === 'zfwBar' ? 'var(--green)' : barId === 'towBar' ? 'var(--blue)' : 'var(--orange)';
+  };
+  setBar('zfwDisplay', 'zfwBar', zfw, mzfw);
+  setBar('towDisplay', 'towBar', tow, mtow);
+  setBar('ldwDisplay', 'ldwBar', ldw, mldw);
+}
+
+// ── Folder chooser ────────────────────────────────────────────────────────────
+function chooseFolder() {
+  const v = prompt('Enter full output folder path on the server:\n(e.g. /home/user/TPS  or  outputs)', document.getElementById('folderDisplay').textContent === 'Tap to set…' ? 'outputs' : document.getElementById('folderDisplay').textContent);
+  if (v && v.trim()) { document.getElementById('folderDisplay').textContent = v.trim(); save(); }
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generateTPS() {
+  if (!S.ofp) { showGenBanner('error', '⚠ No flight loaded — fetch SimBrief first'); return; }
+  const rwy = S.runways[S.selRwy] || {};
+  const ov  = id => document.getElementById(id)?.value?.trim() || '';
+
+  const folderDisplay = document.getElementById('folderDisplay').textContent;
+  const outputsDir = (folderDisplay && folderDisplay !== 'Tap to set…') ? folderDisplay : 'outputs';
+
+  const payload = {
+    SIMBRIEF_USER:    document.getElementById('simbriefUser').value.trim(),
+    PAX_COUNT:        ov('paxCount')  || S.ofp.pax_count,
+    CARGO:            ov('cargo')     || S.ofp.cargo,
+    PLAN_RAMP:        ov('planRamp')  || S.ofp.plan_ramp,
+    CG_PERCENT:       ov('cgPercent') || '25.0',
+    ZFW_OVERRIDE:     ov('zfwOverride'),
+    AIRCRAFT_TYPE:    ov('aircraftType') || S.ofp.icaocode || 'B738',
+    OUTPUTS_DIR:      outputsDir,
+    OUTPUT_SUBFOLDER: ov('subFolder'),
+    RUNWAY_ID:        rwy.id || '',
+    RWY_FLAPS:        ov('rwyFlaps'),
+    RWY_V1:           ov('rwyV1'),
+    RWY_VR:           ov('rwyVR'),
+    RWY_V2:           ov('rwyV2'),
+    RWY_THR:          ov('rwyThr'),
+    RWY_FLEX:         ov('rwyFlex'),
+    RWY_BLEED:        document.getElementById('bleedToggle').dataset.val || 'ON',
+    RWY_HD:           ov('rwyHD'),
+    RWY_MAX_WEIGHT:   ov('rwyMaxWT'),
+    RWY_LIMIT_CODE:   ov('rwyLimit'),
+    RWY_ASDR:         ov('rwyASDR'),
+    RWY_LENGTH:       rwy.length || '',
+  };
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  document.getElementById('genSpinner').style.display = '';
+  document.getElementById('genBtnText').textContent = 'Generating…';
+  document.getElementById('genBtnArrow').style.display = 'none';
+  const bar = document.getElementById('genLoadingBar');
+  bar.style.width = '30%';
+
+  try {
+    bar.style.width = '60%';
+    const res = await fetch(`${getApiBase()}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    bar.style.width = '90%';
+    const data = await res.json();
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.width = '0%'; }, 500);
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Generation failed');
+    }
+
+    S.outputTakeoff    = data.takeoff || '';
+    S.outputCloseout   = data.closeout || '';
+    S.outputLog        = data.stdout || '';
+    S.takeoffFilename  = data.takeoff_filename || 'TAKEOFF.txt';
+    S.closeoutFilename = data.closeout_filename || 'CLOSEOUT.txt';
+    S.savedPath        = data.saved_to || '';
+
+    document.getElementById('outputArea').style.display = '';
+    switchOutTab('takeoff');
+
+    const pathInfo = document.getElementById('savedPathInfo');
+    pathInfo.innerHTML = `<div class="success-banner" style="margin-top:10px;font-size:13px">✓ Files saved to server: <strong>${S.savedPath}</strong></div>`;
+
+    showGenBanner('success', `✓ TPS generated — ${S.ofp.fltnum}  RWY ${rwy.id || '?'}`);
+    save();
+
+  } catch(e) {
+    bar.style.width = '0%';
+    showGenBanner('error', `✕ ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('genSpinner').style.display = 'none';
+    document.getElementById('genBtnText').textContent = 'Generate TPS';
+    document.getElementById('genBtnArrow').style.display = '';
+  }
+}
+
+// ── Output tabs ───────────────────────────────────────────────────────────────
+function switchOutTab(tab) {
+  S.outTab = tab;
+  ['takeoff','closeout','log'].forEach(t =>
+    document.getElementById(`outTab-${t}`)?.classList.toggle('active', t === tab));
+  const content = tab === 'takeoff' ? S.outputTakeoff : tab === 'closeout' ? S.outputCloseout : S.outputLog;
+  document.getElementById('outputPanel').textContent = content || '(empty)';
+  document.getElementById('outputPanel').scrollTop = 0;
+}
+
+function copyOutput() {
+  const text = S.outTab === 'takeoff' ? S.outputTakeoff : S.outTab === 'closeout' ? S.outputCloseout : S.outputLog;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target; btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
+function downloadOutput() {
+  const text = S.outTab === 'takeoff' ? S.outputTakeoff : S.outputCloseout;
+  const name = S.outTab === 'takeoff' ? S.takeoffFilename : S.closeoutFilename;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+}
+
+// ── Banner helpers ────────────────────────────────────────────────────────────
+function showStatus(type, msg) {
+  const a = document.getElementById('simbriefStatus');
+  const cls = type === 'error' ? 'error-banner' : type === 'success' ? 'success-banner' : 'info-banner';
+  a.innerHTML = `<div class="${cls}"><span>${type==='error'?'✕':type==='success'?'✓':'ℹ'}</span><span>${msg}</span></div>`;
+  if (type === 'success') setTimeout(() => { a.innerHTML = ''; }, 6000);
+}
+
+function showGenBanner(type, msg) {
+  const a = document.getElementById('genBannerArea');
+  const cls = type === 'error' ? 'error-banner' : type === 'success' ? 'success-banner' : 'warning-banner';
+  a.innerHTML = `<div class="${cls}"><span>${type==='error'?'✕':type==='success'?'✓':'⚠'}</span><span>${msg}</span></div>`;
+}
+
+function syncUser(el) {
+  document.getElementById('simbriefUser').value = el.value;
+  save();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+load();
+
+// Auto-detect local server if no URL saved
+if (!document.getElementById('apiBaseUrl').value) {
+  document.getElementById('apiBaseUrl').value = window.location.origin;
+  save();
+}
+</script>
+</body>
+</html>
