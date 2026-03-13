@@ -44,7 +44,19 @@ def simbrief_proxy():
     import urllib.request, urllib.error, ssl, xml.etree.ElementTree as ET
 
     url = f"https://www.simbrief.com/api/xml.fetcher.php?username={username}"
-    ctx = ssl._create_unverified_context()
+    def _make_ctx():
+        try:
+            import certifi
+            return ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            pass
+        import platform
+        if platform.system() == "Darwin":
+            mac = "/etc/ssl/cert.pem"
+            if os.path.exists(mac):
+                return ssl.create_default_context(cafile=mac)
+        return ssl.create_default_context()
+    ctx = _make_ctx()
     try:
         with urllib.request.urlopen(url, context=ctx, timeout=15) as r:
             xml_bytes = r.read()
@@ -148,6 +160,55 @@ def simbrief_proxy():
         "runways":      runways,
     }
     return jsonify(data)
+
+
+
+# ── PDF folder matching (same algorithm as Aviobook) ─────────────────────────
+@app.route("/api/match-pdfs", methods=["POST"])
+def match_pdfs():
+    """
+    Client sends: { filenames: [...], orig: "KLAX", dest: "YSSY", flight: "AAL1" }
+    Returns:      { matches: [{name, score, doc_type}] } sorted best-first
+    """
+    try:
+        req        = request.get_json(force=True)
+        filenames  = req.get("filenames", [])
+        orig_icao  = (req.get("orig") or "").strip().upper()
+        dest_icao  = (req.get("dest") or "").strip().upper()
+        flight_num = (req.get("flight") or "").strip().upper().replace(" ", "")
+
+        def score_and_type(name):
+            stem = name.upper().replace(".PDF", "")
+            doc_type = ""
+            for suffix in ("-RLS", "-WB", "-OFP", "-RELEASE", "-WEIGHTBALANCE",
+                           "-TAKEOFF", "-PERF", "-NOTOC", "-LOADSHEET"):
+                if stem.endswith(suffix):
+                    doc_type = suffix.lstrip("-")
+                    stem = stem[: -len(suffix)]
+                    break
+            core = stem.replace("-", "").replace("_", "").replace(" ", "")
+            pair = orig_icao + dest_icao
+            s = 0
+            if pair and pair in core:               s += 100
+            if flight_num and flight_num in core:   s += 60
+            elif orig_icao and orig_icao in core:   s += 20
+            if dest_icao and dest_icao in core:     s += 20
+            if doc_type in ("RLS", "WB", "TAKEOFF", "PERF", "NOTOC", "LOADSHEET"):
+                s += 10
+            return s, doc_type
+
+        results = []
+        for fname in filenames:
+            if not fname.upper().endswith(".PDF"):
+                continue
+            s, doc_type = score_and_type(fname)
+            if s > 0:
+                results.append({"name": fname, "score": s, "doc_type": doc_type})
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return jsonify({"matches": results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ── Generate TPS ──────────────────────────────────────────────────────────────

@@ -90,9 +90,25 @@ def get_next_revision(flight_number, origin, date):
     return current_revision
 
 
+def _make_ssl_context():
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        pass
+    import platform
+    if platform.system() == "Darwin":
+        mac = "/etc/ssl/cert.pem"
+        if os.path.exists(mac):
+            return ssl.create_default_context(cafile=mac)
+    return ssl.create_default_context()
+
+
 def fetch_xml_from_api(username):
-    url = f"https://www.simbrief.com/api/xml.fetcher.php?username={username}"
-    context = ssl._create_unverified_context()
+    import urllib.parse
+    param = "userid" if str(username).strip().isdigit() else "username"
+    url = f"https://www.simbrief.com/api/xml.fetcher.php?{param}={urllib.parse.quote(str(username).strip())}"
+    context = _make_ssl_context()
     try:
         with urllib.request.urlopen(url, context=context) as response:
             return ET.parse(response)
@@ -887,7 +903,11 @@ def generate_combined_output(loadsheet_data, uplink_data, valid_runways,
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    username = os.environ.get('SIMBRIEF_USER', 'tgibbons').strip()
+    username = os.environ.get('SIMBRIEF_USER', '').strip()
+    if not username:
+        print("\n✗ SIMBRIEF_USER environment variable not set.")
+        print("  Usage: SIMBRIEF_USER=yourname python3 TAKEOFF_PERF.py")
+        return
     print(f"Fetching SimBrief data for '{username}'…")
     tree = fetch_xml_from_api(username)
     if not tree:
