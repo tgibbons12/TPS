@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<OFP>
+  <general>
+    <flight_number>646</flight_number>
+    <icao_airline>NAC</icao_airline>
+    <initial_altitude>35000</initial_altitude>
+    <costindex>45</costindex>
+    <route>DCT</route>
+    <avg_temp_dev>M3</avg_temp_dev>
+  </general>
+  <aircraft>
+    <icaocode>B738</icaocode>
+    <name>737-800</name>
+    <reg>N804YK</reg>
+    <fin>3KB</fin>
+  </aircraft>
+  <origin>
+    <icao_code>KLAX</icao_code>
+    <iata_code>LAX</iata_code>
+    <plan_rwy>25RX</plan_rwy>
+  </origin>
+  <destination>
+    <icao_code>KIND</icao_code>
+    <iata_code>IND</iata_code>
+  </destination>
+  <alternate>
+    <icao_code>KSDF</icao_code>
+  </alternate>
+  <fuel>
+    <plan_ramp>30100</plan_ramp>
+    <taxi>500</taxi>
+    <enroute_burn>18200</enroute_burn>
+    <alternate_burn>1800</alternate_burn>
+    <reserve>1200</reserve>
+    <plan_takeoff>29600</plan_takeoff>
+    <min_takeoff>28000</min_takeoff>
+  </fuel>
+  <weights>
+    <pax_count>158</pax_count>
+    <pax_weight>190</pax_weight>
+    <cargo>6200</cargo>
+    <oew>91300</oew>
+    <max_zfw>138300</max_zfw>
+    <max_tow>174200</max_tow>
+    <max_tow_struct>174200</max_tow_struct>
+    <max_ldw>146300</max_ldw>
+    <est_tow>159800</est_tow>
+    <est_zfw>130700</est_zfw>
+  </weights>
+  <crew>
+    <cpt>1</cpt>
+    <fo>1</fo>
+    <fa>4</fa>
+  </crew>
+  <api_params>
+    <acdata_parsed>{"comments": "737-NG 24K"}</acdata_parsed>
+  </api_params>
+  <tlr>
+    <takeoff>
+      <conditions>
+        <surface_condition>dry</surface_condition>
+        <temperature>23</temperature>
+        <altimeter>29.92</altimeter>
+        <wind_direction>270</wind_direction>
+        <wind_speed>5</wind_speed>
+        <airport_iata>LAX</airport_iata>
+      </conditions>
+      <runway>
+        <identifier>25RX</identifier>
+        <gradient>0.2</gradient>
+        <flap_setting>5</flap_setting>
+        <speeds_v1>152</speeds_v1>
+        <speeds_vr>154</speeds_vr>
+        <speeds_v2>160</speeds_v2>
+        <thrust_setting>D-TO1</thrust_setting>
+        <flex_temperature>34</flex_temperature>
+        <length>11837</length>
+        <bleed_setting>ON</bleed_setting>
+        <max_weight>169800</max_weight>
+        <elevation>184</elevation>
+        <limit_code>CLB</limit_code>
+        <headwind_component>0</headwind_component>
+        <distance_reject>9000</distance_reject>
+        <anti_ice_setting>OFF</anti_ice_setting>
+      </runway>
+      <runway>
+        <identifier>24L</identifier>
+        <gradient>0</gradient>
+        <flap_setting>5</flap_setting>
+        <speeds_v1>149</speeds_v1>
+        <speeds_vr>151</speeds_vr>
+        <speeds_v2>158</speeds_v2>
+        <thrust_setting>D-TO1</thrust_setting>
+        <flex_temperature>31</flex_temperature>
+        <length>10285</length>
+        <bleed_setting>ON</bleed_setting>
+        <max_weight>168000</max_weight>
+        <elevation>125</elevation>
+        <limit_code>CLB</limit_code>
+        <headwind_component>0</headwind_component>
+        <distance_reject>9000</distance_reject>
+        <anti_ice_setting>OFF</anti_ice_setting>
+      </runway>
+    </takeoff>
+  </tlr>
+  <tlr_section>---- DRY RWY - PTOW - CALM WIND ----
+RWY  MTOW  MT  CONFIG  FLP  V1  VR  V2  LIMIT
+25RX 1698  34  D-TO1 - BLEEDS ON  5  152  154  160  CLB
+24L  1680  31  D-TO1 - BLEEDS ON  5  149  151  158  CLB
+---- DRY RWY - PTOW PLUS 4000 - CALM WIND ----
+RWY  MTOW  MT  CONFIG  FLP  V1  VR  V2  LIMIT
+25RX 1658  30  D-TO1 - BLEEDS ON  5  150  152  158  CLB
+24L  1640  27  D-TO1 - BLEEDS ON  5  147  149  156  CLB
+</tlr_section>
+</OFP>
